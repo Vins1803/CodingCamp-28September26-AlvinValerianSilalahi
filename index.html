@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Chart.js v4 via CDN (no build step required) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="app-title">💰 Budget Tracker</h1>
+        <p class="app-subtitle">Track your daily spending</p>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark / light mode">
+        <span class="theme-toggle__icon" id="themeIcon">🌙</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Balance Cards ── -->
+  <section class="summary-cards" aria-label="Balance summary">
+    <div class="card card--balance">
+      <span class="card__label">Total Balance</span>
+      <span class="card__value" id="totalBalance">Rp 0</span>
+    </div>
+    <div class="card card--income">
+      <span class="card__label">💚 Income</span>
+      <span class="card__value" id="totalIncome">Rp 0</span>
+    </div>
+    <div class="card card--expense">
+      <span class="card__label">❤️ Expenses</span>
+      <span class="card__value" id="totalExpense">Rp 0</span>
+    </div>
+  </section>
+
+  <!-- ── Add Transaction Form ── -->
+  <section class="section" aria-label="Add transaction">
+    <h2 class="section__title">Add Transaction</h2>
+    <form id="transactionForm" class="form" novalidate>
+
+      <div class="form__row">
+        <div class="form__group">
+          <label class="form__label" for="txDescription">Description</label>
+          <input
+            class="form__input"
+            type="text"
+            id="txDescription"
+            placeholder="e.g. Lunch, Salary…"
+            maxlength="60"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form__row form__row--two">
+        <div class="form__group">
+          <label class="form__label" for="txAmount">Amount (Rp)</label>
+          <input
+            class="form__input"
+            type="number"
+            id="txAmount"
+            placeholder="0"
+            min="1"
+            required
+          />
+        </div>
+        <div class="form__group">
+          <label class="form__label" for="txType">Type</label>
+          <select class="form__input form__select" id="txType">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form__row form__row--two">
+        <div class="form__group">
+          <label class="form__label" for="txCategory">Category</label>
+          <select class="form__input form__select" id="txCategory">
+            <option value="Food & Drink">🍔 Food &amp; Drink</option>
+            <option value="Transport">🚌 Transport</option>
+            <option value="Shopping">🛍️ Shopping</option>
+            <option value="Health">💊 Health</option>
+            <option value="Entertainment">🎮 Entertainment</option>
+            <option value="Education">📚 Education</option>
+            <option value="Bills">🧾 Bills</option>
+            <option value="Salary">💼 Salary</option>
+            <option value="Other">📦 Other</option>
+          </select>
+        </div>
+        <div class="form__group">
+          <label class="form__label" for="txDate">Date</label>
+          <input
+            class="form__input"
+            type="date"
+            id="txDate"
+            required
+          />
+        </div>
+      </div>
+
+      <p class="form__error" id="formError" aria-live="polite"></p>
+
+      <button class="btn btn--primary" type="submit">＋ Add Transaction</button>
+    </form>
+  </section>
+
+  <!-- ── Monthly Summary ── -->
+  <section class="section" aria-label="Monthly summary">
+    <div class="monthly-header">
+      <h2 class="section__title">Monthly Summary</h2>
+      <div class="monthly-nav">
+        <button class="btn btn--ghost btn--sm" id="monthPrev" aria-label="Previous month">◀</button>
+        <span class="monthly-label" id="monthLabel"></span>
+        <button class="btn btn--ghost btn--sm" id="monthNext" aria-label="Next month">▶</button>
+      </div>
+    </div>
+    <div class="monthly-cards" id="monthlyCards">
+      <!-- populated by JS -->
+    </div>
+    <div class="monthly-table-wrap">
+      <table class="monthly-table" id="monthlyTable" aria-label="Monthly category breakdown">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="ta-right">Expenses</th>
+            <th class="ta-right">Income</th>
+            <th class="ta-right">Net</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTableBody">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+      <p class="tx-empty" id="monthlyEmpty" hidden>No transactions this month.</p>
+    </div>
+  </section>
+
+  <!-- ── Spending Chart ── -->
+  <section class="section" aria-label="Spending chart">
+    <div class="chart-header">
+      <h2 class="section__title">Spending by Category</h2>
+      <div class="chart-tabs" role="tablist" aria-label="Chart type">
+        <button class="chart-tab chart-tab--active" id="tabPie" role="tab" aria-selected="true"  aria-controls="panelPie">🥧 Pie</button>
+        <button class="chart-tab"                   id="tabBar" role="tab" aria-selected="false" aria-controls="panelBar">📊 Bar</button>
+      </div>
+    </div>
+
+    <!-- Pie panel -->
+    <div class="chart-wrapper" id="panelPie" role="tabpanel" aria-labelledby="tabPie">
+      <div class="pie-layout">
+        <div class="pie-canvas-wrap">
+          <canvas id="pieChart" aria-label="Pie chart of spending by category"></canvas>
+          <p class="chart-empty" id="pieEmpty">No expense data yet.</p>
+        </div>
+        <ul class="pie-legend" id="pieLegend" aria-label="Chart legend"></ul>
+      </div>
+    </div>
+
+    <!-- Bar panel (hand-rolled canvas, hidden by default) -->
+    <div class="chart-wrapper" id="panelBar" role="tabpanel" aria-labelledby="tabBar" hidden>
+      <canvas id="spendingChart" aria-label="Bar chart of spending by category"></canvas>
+      <p class="chart-empty" id="chartEmpty">No expense data yet.</p>
+    </div>
+  </section>
+
+  <!-- ── Transaction History ── -->
+  <section class="section" aria-label="Transaction history">
+    <div class="history-header">
+      <h2 class="section__title">History</h2>
+      <div class="history-controls">
+        <select class="form__input form__select filter-select" id="filterCategory" aria-label="Filter by category">
+          <option value="all">All Categories</option>
+          <option value="Food & Drink">🍔 Food &amp; Drink</option>
+          <option value="Transport">🚌 Transport</option>
+          <option value="Shopping">🛍️ Shopping</option>
+          <option value="Health">💊 Health</option>
+          <option value="Entertainment">🎮 Entertainment</option>
+          <option value="Education">📚 Education</option>
+          <option value="Bills">🧾 Bills</option>
+          <option value="Salary">💼 Salary</option>
+          <option value="Other">📦 Other</option>
+        </select>
+        <select class="form__input form__select filter-select" id="sortOrder" aria-label="Sort transactions">
+          <option value="date-desc">📅 Newest first</option>
+          <option value="date-asc">📅 Oldest first</option>
+          <option value="amount-desc">💰 Highest amount</option>
+          <option value="amount-asc">💰 Lowest amount</option>
+          <option value="category-az">🔤 Category A–Z</option>
+        </select>
+        <button class="btn btn--danger btn--sm" id="clearAllBtn" aria-label="Clear all transactions">
+          🗑 Clear All
+        </button>
+      </div>
+    </div>
+
+    <ul class="tx-list" id="transactionList" aria-label="Transaction list">
+      <!-- populated by JS -->
+    </ul>
+
+    <p class="tx-empty" id="txEmpty">No transactions yet. Add one above!</p>
+  </section>
+
+  <!-- ── Confirm Modal ── -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+    <div class="modal">
+      <h3 class="modal__title" id="modalTitle">Clear all transactions?</h3>
+      <p class="modal__body">This will permanently delete all your data. This cannot be undone.</p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="modalCancel">Cancel</button>
+        <button class="btn btn--danger" id="modalConfirm">Yes, clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
